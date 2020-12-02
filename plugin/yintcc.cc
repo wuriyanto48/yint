@@ -68,7 +68,7 @@ void GetIP(const v8::FunctionCallbackInfo<v8::Value>& args)
 
 }
 
-void DoKurl(const v8::FunctionCallbackInfo<v8::Value>& args)
+void HTTPGet(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
     v8::Isolate* isolate = args.GetIsolate();
 
@@ -102,7 +102,7 @@ void DoKurl(const v8::FunctionCallbackInfo<v8::Value>& args)
 void Init(v8::Local<v8::Object> exports)
 {
     NODE_SET_METHOD(exports, "getIP", GetIP);
-    NODE_SET_METHOD(exports, "doKurl", DoKurl);
+    NODE_SET_METHOD(exports, "httpGet", HTTPGet);
 }
 
 NODE_MODULE(NODE_GYP_MODULE_NAME, Init);
