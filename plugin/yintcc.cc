@@ -1,4 +1,4 @@
-#include <node.h>
+#include <napi.h>
 #include <stdio.h>
 #include <iostream>
 #include <arpa/inet.h>
@@ -10,20 +10,13 @@
 #include <unistd.h>
 #include <string.h>
 
-namespace plugin {
+namespace yint {
 
 const int PORT = 80;
 
-char* GetStringFromLocal(v8::Local<v8::String> key)
+char* StringAsCharArr(std::string* str)
 {
-    uint32_t utf8_length = key->Utf8Length();
-    char* buffer = new char[utf8_length];
-    key->WriteUtf8(buffer);
-    // smart pointers can't be used as WriteUtf8 takes plain char *
-    // e.g. std::unique_ptr<char*> buffer = new char[utf8_length];
-    // so we have to clean memory explicitly
-    //delete[] buffer;
-    return buffer;
+    return str->empty() ? NULL : &*str->begin();
 }
 
 int _GetIP(const char* web_url, char** ip)
@@ -39,72 +32,75 @@ int _GetIP(const char* web_url, char** ip)
     return 0;
 }
 
-void GetIP(const v8::FunctionCallbackInfo<v8::Value>& args)
+Napi::Value GetIP(const Napi::CallbackInfo& info)
 {
 
-    v8::Isolate* isolate = args.GetIsolate();
+    Napi::Env env = info.Env();
 
-    if (args.Length() <= 0)
+    if (info.Length() <= 0)
     {
-        v8::Local<v8::String> err_val = v8::String::NewFromUtf8(isolate, "required one argument");
-        isolate->ThrowException(v8::Exception::TypeError(err_val));
-        return;
+        Napi::TypeError::New(env, "required one argument").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
-    v8::Local<v8::String> url_val = args[0].As<v8::String>();
-    char* url_buffer = GetStringFromLocal(url_val);
+    if (!info[0].IsString()) {
+        Napi::TypeError::New(env, "argument should be string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    std::string url_val = info[0].As<Napi::String>().Utf8Value();
 
     char* ip = nullptr;
-    int res_ip = _GetIP(url_buffer, &ip);
+    int res_ip = _GetIP(StringAsCharArr(&url_val), &ip);
     if (res_ip < 0)
     {
-        v8::Local<v8::String> err_val = v8::String::NewFromUtf8(isolate, "cannot get ip");
-        isolate->ThrowException(v8::Exception::TypeError(err_val));
-        return;
+        Napi::TypeError::New(env, "cannot get ip").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
-    v8::Local<v8::String> ret_val = v8::String::NewFromUtf8(isolate, ip);
-    args.GetReturnValue().Set(ret_val);
+    Napi::String ret_val = Napi::String::New(env, ip);
+    return ret_val;
 
 }
 
-void HTTPGet(const v8::FunctionCallbackInfo<v8::Value>& args)
+Napi::Value HTTPGet(const Napi::CallbackInfo& info)
 {
-    v8::Isolate* isolate = args.GetIsolate();
+    Napi::Env env = info.Env();
 
-    if (args.Length() <= 0)
+    if (info.Length() <= 0)
     {
-        v8::Local<v8::String> err_val = v8::String::NewFromUtf8(isolate, "required one argument");
-        isolate->ThrowException(v8::Exception::TypeError(err_val));
-        return;
+        Napi::TypeError::New(env, "required one argument").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
-    v8::Local<v8::String> url_val = args[0].As<v8::String>();
-    char* url_buffer = GetStringFromLocal(url_val);
+    if (!info[0].IsString()) {
+        Napi::TypeError::New(env, "argument should be string").ThrowAsJavaScriptException();
+        return env.Null();
+    }
 
-    std::cout << url_buffer << std::endl;
+    std::string url_val = info[0].As<Napi::String>().Utf8Value();
 
     char* ip = nullptr;
-    int res_ip = _GetIP(url_buffer, &ip);
+    int res_ip = _GetIP(StringAsCharArr(&url_val), &ip);
     if (res_ip < 0)
     {
-        v8::Local<v8::String> err_val = v8::String::NewFromUtf8(isolate, "cannot get host information: NULL");
-        isolate->ThrowException(v8::Exception::TypeError(err_val));
-        return;
+        Napi::TypeError::New(env, "cannot get ip").ThrowAsJavaScriptException();
+        return env.Null();
     }
+
     printf("%s\n", ip);
 
-    v8::Local<v8::String> ret_val = v8::String::NewFromUtf8(isolate, "fu*k");
-    args.GetReturnValue().Set(ret_val);
-    delete url_buffer;
+    Napi::String ret_val = Napi::String::New(env, "fu*k");
+    return ret_val;
 }
 
-void Init(v8::Local<v8::Object> exports)
+Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
-    NODE_SET_METHOD(exports, "getIP", GetIP);
-    NODE_SET_METHOD(exports, "httpGet", HTTPGet);
+    exports.Set(Napi::String::New(env, "getIP"), Napi::Function::New(env, GetIP));
+    exports.Set(Napi::String::New(env, "httpGet"), Napi::Function::New(env, HTTPGet));
+    return exports;
 }
 
-NODE_MODULE(NODE_GYP_MODULE_NAME, Init);
+NODE_API_MODULE(yintcc, Init);
 
 }

@@ -1,7 +1,7 @@
 const yintcc = require('./build/Release/yintcc');
 
 const main = () => {
-    const res = yintcc.getIP('www.wuriyanto.com');
+    const res = yintcc.httpGet('www.wuriyanto.com');
     console.log(res);
 }
 
