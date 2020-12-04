@@ -14,7 +14,7 @@ namespace yint {
 
 const int PORT = 80;
 
-char* StringAsCharArr(std::string* str)
+char* _StringAsCharArr(std::string* str)
 {
     return str->empty() ? NULL : &*str->begin();
 }
@@ -25,6 +25,14 @@ int _GetIP(const char* web_url, char** ip)
     if (he == NULL)
     {
         return -1;
+    }
+
+    int l = sizeof(he->h_addr_list)/sizeof(char*);
+    printf("%d\n", l);
+    for (int i = 0; i < l; i++)
+    {
+        char* ll = inet_ntoa(*(struct in_addr*)he->h_addr_list[i]);
+        printf("%s\n", ll);
     }
 
     *ip = inet_ntoa(*(struct in_addr*)he->h_addr_list[0]);
@@ -51,7 +59,7 @@ Napi::Value GetIP(const Napi::CallbackInfo& info)
     std::string url_val = info[0].As<Napi::String>().Utf8Value();
 
     char* ip = nullptr;
-    int res_ip = _GetIP(StringAsCharArr(&url_val), &ip);
+    int res_ip = _GetIP(_StringAsCharArr(&url_val), &ip);
     if (res_ip < 0)
     {
         Napi::TypeError::New(env, "cannot get ip").ThrowAsJavaScriptException();
@@ -81,7 +89,7 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
     std::string url_val = info[0].As<Napi::String>().Utf8Value();
 
     char* ip = nullptr;
-    int res_ip = _GetIP(StringAsCharArr(&url_val), &ip);
+    int res_ip = _GetIP(_StringAsCharArr(&url_val), &ip);
     if (res_ip < 0)
     {
         Napi::TypeError::New(env, "cannot get ip").ThrowAsJavaScriptException();
