@@ -39,6 +39,47 @@ int _GetIP(const char* web_url, char** ip, char** hostname)
     return 0;
 }
 
+int _CreateSocket(const char* ip, const char* http_port)
+{
+
+    addrinfo addr_i, *addr_i_p;
+    memset(&addr_i, 0, sizeof(addr_i));
+
+    addr_i.ai_family = AF_INET;
+    addr_i.ai_socktype = SOCK_STREAM;
+    addr_i.ai_flags = AI_PASSIVE;
+
+    int addr_info_res = getaddrinfo(ip, http_port, &addr_i, &addr_i_p);
+    if (addr_info_res != 0)
+    {
+        return -1;
+    }
+
+    if (addr_i_p == NULL)
+    {
+        return -1;
+    }
+
+    // create new socket
+    int sock_FD = socket(addr_i_p->ai_family, addr_i_p->ai_socktype, addr_i_p->ai_protocol);
+    if (sock_FD == -1) 
+    {
+        return -1;
+    }
+
+    // estabilish new TCP connection
+    int connect_R = connect(sock_FD, addr_i_p->ai_addr, addr_i_p->ai_addrlen);
+    if (connect_R == -1) 
+    {
+        close(sock_FD);
+        return -1;
+    }
+
+    freeaddrinfo(addr_i_p);
+
+    return sock_FD;
+}
+
 int _SendReqWriteOut(int sock_FD, char* hostname, std::ostream& out) 
 {
     // TODO
@@ -124,40 +165,10 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
         return env.Null();
     }
 
-    addrinfo addr_i, *addr_i_p;
-    memset(&addr_i, 0, sizeof(addr_i));
-
-    addr_i.ai_family = AF_INET;
-    addr_i.ai_socktype = SOCK_STREAM;
-    addr_i.ai_flags = AI_PASSIVE;
-
-    int addr_info_res = getaddrinfo(ip, HTTP_PORT, &addr_i, &addr_i_p);
-    if (addr_info_res != 0)
-    {
-        Napi::TypeError::New(env, gai_strerror(addr_info_res)).ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    if (addr_i_p == NULL)
-    {
-        Napi::TypeError::New(env, "error: no address found").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    // create new socket
-    int sock_FD = socket(addr_i_p->ai_family, addr_i_p->ai_socktype, addr_i_p->ai_protocol);
+    int sock_FD = _CreateSocket(ip, HTTP_PORT);
     if (sock_FD == -1) 
     {
         Napi::TypeError::New(env, "error: creating socket").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-
-    // estabilish new TCP connection
-    int connect_R = connect(sock_FD, addr_i_p->ai_addr, addr_i_p->ai_addrlen);
-    if (connect_R == -1) 
-    {
-        close(sock_FD);
-        Napi::TypeError::New(env, "error: connecting socket").ThrowAsJavaScriptException();
         return env.Null();
     }
 
@@ -180,8 +191,10 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
     //close file
     out_file.close();
 
+    // close socket connection
     close(sock_FD);
-    freeaddrinfo(addr_i_p);
+
+    // return something
     Napi::String ret_val = Napi::String::New(env, "fu*k");
     return ret_val;
 }
