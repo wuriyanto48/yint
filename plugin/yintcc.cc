@@ -1,6 +1,8 @@
 #include <napi.h>
+#include <array>
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <arpa/inet.h>
 #include <stdlib.h>
@@ -13,8 +15,11 @@
 
 namespace yint {
 
+typedef unsigned char Byte;
+
 const char* HTTP_PORT = "80";
 const char* SECURE_HTTP_PORT = "443";
+const size_t BUFFER = 1024;
 
 char* _StringAsCharArr(std::string* str)
 {
@@ -30,6 +35,34 @@ int _GetIP(const char* web_url, char** ip, char** hostname)
     }
     *hostname = he->h_name;
     *ip = inet_ntoa(*(struct in_addr*)he->h_addr_list[0]);
+
+    return 0;
+}
+
+int _SendReqWriteOut(int sock_FD, char* hostname, std::ostream& out) 
+{
+    // TODO
+    // add redirect to https
+    std::ostringstream msg;
+    msg << "GET / HTTP/1.1\r\n"
+        << "Host: " << hostname << "\r\n"
+        << "Accept: text/html\r\n"
+        << "Connection: close\r\n"
+        << "\r\n\r\n";
+
+    std::string msg_request = msg.str();
+
+    int sent = send(sock_FD, msg_request.c_str(), msg_request.length(), 0);
+    if (sent == -1) 
+    {
+        return -1;
+    }
+
+    std::array<Byte, BUFFER> rec;
+    while(recv(sock_FD, rec.data(), rec.size(), 0) > 0)
+    {
+        out << rec.data();
+    }
 
     return 0;
 }
@@ -133,27 +166,19 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
     printf("%s\n", hostname);
     printf("%d\n", sock_FD);
 
-    std::ostringstream msg;
-    msg << "GET / HTTP/1.1\r\n"
-        << "Host: " << hostname << "\r\n"
-        << "Accept: text/html\r\n"
-        << "Connection: close\r\n"
-        << "\r\n\r\n";
+    // write response to file
+    std::ofstream out_file;
+    out_file.open("out.txt");
 
-    std::string msg_request = msg.str();
-
-    int sent = send(sock_FD, msg_request.c_str(), msg_request.length(), 0);
+    int sent = _SendReqWriteOut(sock_FD, hostname, out_file);
     if (sent == -1) 
     {
         Napi::TypeError::New(env, "error: sending request").ThrowAsJavaScriptException();
         return env.Null();
     }
 
-    char rec;
-    while(read(sock_FD, &rec, 1) > 0)
-    {
-        std::cout << rec;
-    }
+    //close file
+    out_file.close();
 
     close(sock_FD);
     freeaddrinfo(addr_i_p);
