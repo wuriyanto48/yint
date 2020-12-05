@@ -39,7 +39,7 @@ int _GetIP(const char* web_url, char** ip, char** hostname)
     return 0;
 }
 
-int _CreateSocket(const char* ip, const char* http_port)
+int _CreateSocket(const char* ip, const char* port)
 {
 
     addrinfo addr_i, *addr_i_p;
@@ -49,7 +49,7 @@ int _CreateSocket(const char* ip, const char* http_port)
     addr_i.ai_socktype = SOCK_STREAM;
     addr_i.ai_flags = AI_PASSIVE;
 
-    int addr_info_res = getaddrinfo(ip, http_port, &addr_i, &addr_i_p);
+    int addr_info_res = getaddrinfo(ip, port, &addr_i, &addr_i_p);
     if (addr_info_res != 0)
     {
         return -1;
