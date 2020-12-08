@@ -1,6 +1,6 @@
 ### yint (yes its network tool)
 
-Its just a useless networking tool that bind a `C++` code into `NodeJs` that uses `Chrome's V8`(https://v8docs.nodesource.com/)
+Trust me, its just a useless networking tool that uses a `C++`, `NodeJs` and `Chrome's V8`(https://v8docs.nodesource.com/)
 
 Getting started
 
