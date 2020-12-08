@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <string.h>
+#include <vector>
 
 namespace yint {
 
@@ -26,13 +27,34 @@ char* _StringAsCharArr(std::string* str)
     return str->empty() ? NULL : &*str->begin();
 }
 
-int _GetIP(const char* web_url, char** ip, char** hostname)
+int _ExtractURL(const char* web_url, const char** ip, const char** hostname, char** path)
 {
-    hostent* he = gethostbyname(web_url);
-    if (he == NULL)
+
+    std::string web_url_str(web_url);
+    std::stringstream web_url_str_stream(web_url_str);
+
+    std::vector<std::string> web_url_vec;
+
+    std::string web_url_part;
+    while (std::getline(web_url_str_stream, web_url_part, '/'))
     {
-        return -1;
+        web_url_vec.push_back(web_url_part);
     }
+
+    for(int i = 0; i < web_url_vec.size(); i++)
+        std::cout << web_url_vec[i] << std::endl;
+
+    std::string path_("/");
+    if (web_url_vec.size() > 1)
+        path_ = path_.append(web_url_vec[1]);
+        
+    // copy path
+    strcpy(*path, path_.c_str());
+
+    hostent* he = gethostbyname(web_url_vec[0].c_str());
+    if (he == NULL)
+        return -1;
+    
     *hostname = he->h_name;
     *ip = inet_ntoa(*(struct in_addr*)he->h_addr_list[0]);
 
@@ -80,18 +102,30 @@ int _CreateSocket(const char* ip, const char* port)
     return sock_FD;
 }
 
-int _SendReqWriteOut(int sock_FD, char* hostname, std::ostream& out) 
+int _ReadHTTPCode(std::iostream& resp, uint32_t* http_code)
+{
+    std::string line;
+    std::getline(resp, line);
+    std::cout << "---------------" << std::endl;
+    std::cout << line << std::endl;
+    return 0;
+}
+
+int _SendReqWriteOut(int sock_FD, const char* path, const char* hostname, std::ostream& out) 
 {
     // TODO
     // add redirect to https
+
     std::ostringstream msg;
-    msg << "GET / HTTP/1.1\r\n"
+    msg << "GET " << path << " HTTP/1.1\r\n"
         << "Host: " << hostname << "\r\n"
         << "Accept: text/html\r\n"
         << "Connection: close\r\n"
         << "\r\n\r\n";
 
     std::string msg_request = msg.str();
+    std::cout << "----- request -----" << std::endl;
+    std::cout << msg_request << std::endl;
 
     int sent = send(sock_FD, msg_request.c_str(), msg_request.length(), 0);
     if (sent == -1) 
@@ -104,6 +138,9 @@ int _SendReqWriteOut(int sock_FD, char* hostname, std::ostream& out)
     {
         out << rec.data();
     }
+
+    //TODO
+    //_ReadHTTPCode(out, NULL);
 
     return 0;
 }
@@ -126,8 +163,8 @@ Napi::Value GetIP(const Napi::CallbackInfo& info)
 
     std::string url_val = info[0].As<Napi::String>().Utf8Value();
 
-    char* ip = nullptr;
-    int res_ip = _GetIP(_StringAsCharArr(&url_val), &ip, NULL);
+    const char* ip = nullptr;
+    int res_ip = _ExtractURL(_StringAsCharArr(&url_val), &ip, NULL, NULL);
     if (res_ip < 0)
     {
         Napi::TypeError::New(env, "cannot get ip").ThrowAsJavaScriptException();
@@ -156,9 +193,10 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
 
     std::string url_val = info[0].As<Napi::String>().Utf8Value();
 
-    char* ip = nullptr;
-    char* hostname = nullptr;
-    int res_ip = _GetIP(_StringAsCharArr(&url_val), &ip, &hostname);
+    const char* ip = nullptr;
+    const char* hostname = nullptr;
+    char* path = (char*) malloc(sizeof(char*) * 1024);
+    int res_ip = _ExtractURL(_StringAsCharArr(&url_val), &ip, &hostname, &path);
     if (res_ip < 0)
     {
         Napi::TypeError::New(env, "cannot get ip").ThrowAsJavaScriptException();
@@ -168,25 +206,31 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
     int sock_FD = _CreateSocket(ip, HTTP_PORT);
     if (sock_FD == -1) 
     {
+        free(path);
         Napi::TypeError::New(env, "error: creating socket").ThrowAsJavaScriptException();
         return env.Null();
     }
 
     printf("%s\n", "---------");
-    printf("%s\n", ip);
-    printf("%s\n", hostname);
+    printf("ip : %s\n", ip);
+    printf("host : %s\n", hostname);
     printf("%d\n", sock_FD);
+    printf("path : %s\n", path);
 
     // write response to file
     std::ofstream out_file;
     out_file.open("out.txt");
 
-    int sent = _SendReqWriteOut(sock_FD, hostname, out_file);
+    int sent = _SendReqWriteOut(sock_FD, path, hostname, out_file);
     if (sent == -1) 
     {
+        free(path);
         Napi::TypeError::New(env, "error: sending request").ThrowAsJavaScriptException();
         return env.Null();
     }
+
+    // free path
+    free(path);
 
     //close file
     out_file.close();
