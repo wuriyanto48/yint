@@ -1,7 +1,7 @@
 {
   "name": "yint",
   "version": "1.0.0",
-  "description": "yint (yes its network tool)",
+  "description": "yint (yes its networking tool)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
