@@ -18,16 +18,16 @@ namespace yint {
 
 typedef unsigned char Byte;
 
-const char* HTTP_PORT = "80";
-const char* SECURE_HTTP_PORT = "443";
-const size_t BUFFER = 1024;
+static const char* HTTP_PORT = "80";
+static const char* SECURE_HTTP_PORT = "443";
+static const size_t BUFFER = 1024;
 
-char* _StringAsCharArr(std::string* str)
+static char* _StringAsCharArr(std::string* str)
 {
     return str->empty() ? NULL : &*str->begin();
 }
 
-int _ExtractURL(const char* web_url, const char** ip, const char** hostname, char** path)
+static int _ExtractURL(const char* web_url, const char** ip, const char** hostname, char** path)
 {
 
     std::string web_url_str(web_url);
@@ -42,26 +42,32 @@ int _ExtractURL(const char* web_url, const char** ip, const char** hostname, cha
     }
 
     for(int i = 0; i < web_url_vec.size(); i++)
+    {
         std::cout << web_url_vec[i] << std::endl;
+    }
 
     std::string path_("/");
     if (web_url_vec.size() > 1)
+    {
         path_ = path_.append(web_url_vec[1]);
-        
+    }
+
     // copy path
     strcpy(*path, path_.c_str());
 
     hostent* he = gethostbyname(web_url_vec[0].c_str());
     if (he == NULL)
+    {
         return -1;
-    
+    }
+
     *hostname = he->h_name;
     *ip = inet_ntoa(*(struct in_addr*)he->h_addr_list[0]);
 
     return 0;
 }
 
-int _CreateSocket(const char* ip, const char* port)
+static int _CreateSocket(const char* ip, const char* port)
 {
 
     addrinfo addr_i, *addr_i_p;
@@ -102,7 +108,7 @@ int _CreateSocket(const char* ip, const char* port)
     return sock_FD;
 }
 
-int _ReadHTTPCode(std::iostream& resp, uint32_t* http_code)
+static int _ReadHTTPCode(std::iostream& resp, uint32_t* http_code)
 {
     std::string line;
     std::getline(resp, line);
@@ -111,7 +117,7 @@ int _ReadHTTPCode(std::iostream& resp, uint32_t* http_code)
     return 0;
 }
 
-int _SendReqWriteOut(int sock_FD, const char* path, const char* hostname, std::ostream& out) 
+static int _SendReqWriteOut(int sock_FD, const char* path, const char* hostname, std::ostream& out) 
 {
     // TODO
     // add redirect to https
