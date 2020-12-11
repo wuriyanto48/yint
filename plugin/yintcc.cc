@@ -22,6 +22,21 @@ static const char* HTTP_PORT = "80";
 static const char* SECURE_HTTP_PORT = "443";
 static const size_t BUFFER = 1024;
 
+enum Method: uint32_t { GET, POST, PUT, DELETE };
+
+std::ostream& operator<<(std::ostream& out, Method method)
+{
+    switch (method)
+    {
+        case Method::GET    : out << "GET"; break;
+        case Method::POST   : out << "POST"; break;
+        case Method::PUT    : out << "PUT"; break;
+        case Method::DELETE : out << "DELETE"; break;
+        default             : out.setstate(std::ios_base::failbit);
+    }
+    return out;
+}
+
 static char* _StringAsCharArr(std::string* str)
 {
     return str->empty() ? NULL : &*str->begin();
@@ -117,13 +132,13 @@ static int _ReadHTTPCode(std::iostream& resp, uint32_t* http_code)
     return 0;
 }
 
-static int _SendReqWriteOut(int sock_FD, const char* path, const char* hostname, std::ostream& out) 
+static int _SendReqWriteOut(int sock_FD, Method method, const char* path, const char* hostname, std::ostream& out) 
 {
     // TODO
     // add redirect to https
 
     std::ostringstream msg;
-    msg << "GET " << path << " HTTP/1.1\r\n"
+    msg << method << " " << path << " HTTP/1.1\r\n"
         << "Host: " << hostname << "\r\n"
         << "Accept: text/html\r\n"
         << "Connection: close\r\n"
@@ -227,7 +242,7 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
     std::ofstream out_file;
     out_file.open("out.txt");
 
-    int sent = _SendReqWriteOut(sock_FD, path, hostname, out_file);
+    int sent = _SendReqWriteOut(sock_FD, Method::GET, path, hostname, out_file);
     if (sent == -1) 
     {
         free(path);
