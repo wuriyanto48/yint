@@ -216,7 +216,8 @@ Napi::Value HTTPGet(const Napi::CallbackInfo& info)
 
     const char* ip = nullptr;
     const char* hostname = nullptr;
-    char* path = (char*) malloc(sizeof(char*) * 1024);
+    //char* path = (char*) malloc(sizeof(char*) * 1024);
+    char* path = static_cast<char*>(malloc(sizeof(char*) * 1024));
     int res_ip = _ExtractURL(_StringAsCharArr(&url_val), &ip, &hostname, &path);
     if (res_ip < 0)
     {
