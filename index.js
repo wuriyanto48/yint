@@ -1,13 +1,7 @@
-let yintcc;
-try{
-    yintcc = require('./build/Release/yintcc.node');
-} catch(e) {
-    if (e.code == 'MODULE_NOT_FOUND') throw e;
-    yintcc = require('./build/Debug/yintcc.node');
-}
+let yintcc = require('./lib');
 
 const main = () => {
-    const res = yintcc.getIP('wuriyanto.com');
+    const res = yintcc.httpGet('tokopedia.com');
     console.log(res);
 }
 
