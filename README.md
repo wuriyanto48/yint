@@ -1,4 +1,4 @@
-### yint (yes its network tool)
+### yint (yes its a networking tool)
 
 Trust me, its just a useless networking tool that uses a `C++`, `NodeJs` and `Chrome's V8`
 
