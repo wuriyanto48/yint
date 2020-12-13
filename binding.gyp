@@ -1,11 +1,11 @@
 {
     "targets": [
         {
-            "target_name": "yintcc",
+            "target_name": "yint",
             "cflags!": [ "-fno-exceptions" ],
             "cflags_cc!": [ "-fno-exceptions" ],
             "sources": [
-                "plugin/Yintcc.cc", 
+                "plugin/Yint.cc", 
                 "plugin/YintSocket.cc"
             ],
             "include_dirs": [
