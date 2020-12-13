@@ -1,7 +1,7 @@
-let yintcc = require('./lib');
+let yint = require('./lib');
 
 const main = () => {
-    const res = yintcc.httpGet('wuriyanto.com');
+    const res = yint.httpGet('wuriyanto.com');
     console.log(res);
 }
 
